@@ -37,7 +37,8 @@ static void infer_type(node_t *nptr)
     // Week 1 TODO: Implement a recursive post-order traversal of the AST. Remember to include a base case.
     if (nptr)
     {
-        for (int i = 0; i < 3; ++i)
+        int numChildren = 3;
+        for (int i = 0; i < numChildren; ++i)
         {
             if (nptr->children[i])
             {
@@ -60,22 +61,10 @@ static void infer_type(node_t *nptr)
             nptr->type = nptr->children[0]->type;
             break;
 
-        case TOK_PLUS:   // +
-        case TOK_BMINUS: // -
-        case TOK_TIMES:  // *
-        case TOK_DIV:    // /
-        case TOK_MOD:    // %
-            if (nptr->children[0]->type != INT_TYPE || nptr->children[1]->type != INT_TYPE)
-            {
-                handle_error(ERR_TYPE);
-                return;
-            }
-            nptr->type = INT_TYPE;
-            break;
-
+        
         case TOK_AND: // &
         case TOK_OR:  // |
-            if (nptr->children[0]->type != BOOL_TYPE || nptr->children[1]->type != BOOL_TYPE)
+            if ((nptr->children[1]->type != BOOL_TYPE) || (nptr->children[0]->type != BOOL_TYPE))
             {
                 handle_error(ERR_TYPE);
                 return;
@@ -85,13 +74,28 @@ static void infer_type(node_t *nptr)
 
         case TOK_LT: // <
         case TOK_GT: // >
-            if (nptr->children[0]->type != INT_TYPE || nptr->children[1]->type != INT_TYPE)
+            if ((nptr->children[1]->type != INT_TYPE) || (nptr->children[0]->type != INT_TYPE))
             {
                 handle_error(ERR_TYPE);
                 return;
             }
             nptr->type = BOOL_TYPE;
             break;
+
+        case TOK_PLUS:   // +
+        case TOK_BMINUS: // -
+        case TOK_TIMES:  // *
+        case TOK_DIV:    // /
+        case TOK_MOD:    // %
+            if ((nptr->children[1]->type != INT_TYPE) || (nptr->children[0]->type != INT_TYPE))
+            {
+                //type error
+                handle_error(ERR_TYPE);
+                return;
+            }
+            nptr->type = INT_TYPE;
+            break;
+
 
         case TOK_EQ: // ~
             if ((nptr->children[0]->type) != (nptr->children[1]->type))
@@ -101,6 +105,16 @@ static void infer_type(node_t *nptr)
             }
             nptr->type = BOOL_TYPE;
             break;
+
+         case TOK_QUESTION: // ?
+            if ((nptr->children[0]->type == BOOL_TYPE) && ((nptr->children[1]->type) != (nptr->children[2]->type)))
+            {
+                handle_error(ERR_TYPE);
+                return;
+            }
+            nptr->type = nptr->children[1]->type;
+            break;
+
         case TOK_UMINUS: // _
             if ((nptr->children[0]->type) != INT_TYPE)
             {
@@ -119,15 +133,7 @@ static void infer_type(node_t *nptr)
             nptr->type = BOOL_TYPE;
             break;
 
-        case TOK_QUESTION: // ?
-            if ((nptr->children[0]->type == BOOL_TYPE) && ((nptr->children[1]->type) != (nptr->children[2]->type)))
-            {
-                handle_error(ERR_TYPE);
-                return;
-            }
-            nptr->type = nptr->children[1]->type;
-            break;
-
+       
         default:
             break;
         }
@@ -189,9 +195,11 @@ static void eval_node(node_t *nptr)
         return;
 
     // Week 1 TODO: Implement a recursive post-order traversal of the AST. Remember to include a base case.
+
     if (nptr)
     {
-        for (int i = 0; i < 3; ++i)
+        int numChildren = 3;
+        for (int i = 0; i < numChildren; ++i)
         {
             if ((nptr -> tok != TOK_QUESTION))
             {
@@ -207,22 +215,20 @@ static void eval_node(node_t *nptr)
         // Week 2 TODO: Extend evaluation to handle operators on string types.
         if (is_unop(nptr->tok)) // IS IT A UNARY OPERATION
         {
-            switch (nptr->tok)
+            switch (nptr->tok)//IS IT A UNARY OPERATION
             {
-            case TOK_UMINUS:
-                if (nptr->type == INT_TYPE)
-                {
-                    nptr->val.ival = nptr->children[0]->val.ival * -1;
-                }
-                break;
-
             case TOK_NOT:
                 if (nptr->type == BOOL_TYPE)
                 {
                     nptr->val.bval = !(nptr->children[0]->val.bval);
                 }
                 break;
-
+            case TOK_UMINUS:
+                if (nptr->type == INT_TYPE)
+                {
+                    nptr->val.ival = nptr->children[0]->val.ival * -1;
+                }
+                break;
             default:
                 break;
             }
@@ -231,10 +237,10 @@ static void eval_node(node_t *nptr)
         {
             switch (nptr->tok)
             {
-            case TOK_PLUS: // +
-                if (nptr->type == INT_TYPE)
+            case TOK_OR: //||
+                if (nptr->type == BOOL_TYPE)
                 {
-                    nptr->val.ival = ((nptr->children[0]->val.ival) + (nptr->children[1]->val.ival));
+                    nptr->val.bval = ((nptr->children[0]->val.bval) || (nptr->children[1]->val.bval));
                 }
                 break;
             case TOK_BMINUS: // -
@@ -243,10 +249,11 @@ static void eval_node(node_t *nptr)
                     nptr->val.ival = ((nptr->children[0]->val.ival) - (nptr->children[1]->val.ival));
                 }
                 break;
-            case TOK_TIMES: // *
+
+            case TOK_PLUS: // +
                 if (nptr->type == INT_TYPE)
                 {
-                    nptr->val.ival = ((nptr->children[0]->val.ival) * (nptr->children[1]->val.ival));
+                    nptr->val.ival = ((nptr->children[0]->val.ival) + (nptr->children[1]->val.ival));
                 }
                 break;
             case TOK_DIV: // /
@@ -271,6 +278,12 @@ static void eval_node(node_t *nptr)
                     nptr->val.ival = ((nptr->children[0]->val.ival) % (nptr->children[1]->val.ival));
                 }
                 break;
+            case TOK_TIMES: // *
+                if (nptr->type == INT_TYPE)
+                {
+                    nptr->val.ival = ((nptr->children[0]->val.ival) * (nptr->children[1]->val.ival));
+                }
+                break;
 
             case TOK_AND: //&
                 if (nptr->type == BOOL_TYPE)
@@ -279,12 +292,7 @@ static void eval_node(node_t *nptr)
                 }
                 break;
 
-            case TOK_OR: //||
-                if (nptr->type == BOOL_TYPE)
-                {
-                    nptr->val.bval = ((nptr->children[0]->val.bval) || (nptr->children[1]->val.bval));
-                }
-                break;
+            
 
             case TOK_LT:
                 if (nptr->type == BOOL_TYPE)
