@@ -94,7 +94,8 @@ static void infer_type(node_t *nptr)
                     nptr->type = STRING_TYPE;
                     break;
                 }
-                else if ((nptr->children[0]->type == INT_TYPE) && (nptr->children[1]->type == INT_TYPE)){
+                else if ((nptr->children[0]->type == INT_TYPE) && (nptr->children[1]->type == INT_TYPE))
+                {
                     nptr->type = INT_TYPE;
                     break;
                 }
@@ -103,14 +104,15 @@ static void infer_type(node_t *nptr)
                     handle_error(ERR_TYPE);
                     return;
                 }
-                
+
             case TOK_PLUS: // +
                 if ((nptr->children[0]->type == STRING_TYPE) && (nptr->children[1]->type == STRING_TYPE))
                 {
                     nptr->type = STRING_TYPE;
                     break;
                 }
-                else if ((nptr->children[0]-> type == INT_TYPE) && (nptr->children[1]->type == INT_TYPE)){
+                else if ((nptr->children[0]->type == INT_TYPE) && (nptr->children[1]->type == INT_TYPE))
+                {
                     nptr->type = INT_TYPE;
                 }
                 else
@@ -177,6 +179,33 @@ static void infer_type(node_t *nptr)
                 break;
             }
         case NT_LEAF:
+            if (nptr->type == ID_TYPE)
+            {
+                entry_t *entry = get(nptr->val.sval);
+                free(nptr->val.sval);
+                if (entry != NULL)
+                {
+                    nptr->type = entry->type;
+                    if (nptr->type == INT_TYPE)
+                    {
+                        nptr->val.ival = entry->val.ival;
+                    }
+                    else if (nptr->type == BOOL_TYPE)
+                    {
+                        nptr->val.bval = entry->val.bval;
+                    }
+                    else
+                    {
+                        nptr->val.sval = (char *)malloc(strlen(entry->val.sval) + 1);
+                        strcpy(nptr->val.sval, entry->val.sval);
+                    }
+                }
+                else
+                {
+                    handle_error(ERR_UNDEFINED);
+                }
+                break;
+            }
             break;
         default:
             break;
@@ -334,17 +363,17 @@ static void eval_node(node_t *nptr)
                     }
                     else if (nptr->type == STRING_TYPE)
                     {
+                        if (nptr->children[1]->val.ival < 0)
+                        {
+                            handle_error(ERR_EVAL);
+                            return;
+                        }
                         int factor = (nptr->children[1]->val.ival);
                         nptr->val.sval = (char *)malloc((strlen(nptr->children[0]->val.sval) * (factor)) + 1);
-                        if(factor == 0){
-                            nptr->val.sval[0] = '\0';
-                        } else {
-                        // strcpy(nptr->val.sval, nptr->children[0]->val.sval);
                         nptr->val.sval[0] = '\0';
                         for (int i = 0; i < factor; i++)
                         {
                             strcat(nptr->val.sval, nptr->children[0]->val.sval);
-                        }
                         }
                     }
                     break;
@@ -447,13 +476,13 @@ static void eval_node(node_t *nptr)
                     if (nptr->children[0]->val.bval)
                     {
                         eval_node(nptr->children[1]);
-                        nptr->val.sval = (char*)malloc(strlen(nptr->children[1]->val.sval) + 1);
+                        nptr->val.sval = (char *)malloc(strlen(nptr->children[1]->val.sval) + 1);
                         strcpy(nptr->val.sval, nptr->children[1]->val.sval);
                     }
                     else
                     {
                         eval_node(nptr->children[2]);
-                        nptr->val.sval = (char*)malloc(strlen(nptr->children[2]->val.sval) + 1);
+                        nptr->val.sval = (char *)malloc(strlen(nptr->children[2]->val.sval) + 1);
                         strcpy(nptr->val.sval, nptr->children[2]->val.sval);
                     }
                 }
@@ -580,7 +609,7 @@ void cleanup(node_t *nptr)
     for(int i = 0; i < 3; i++){
         cleanup(nptr->children[i]);
     }
-    if(nptr->type == STRING_TYPE){
+    if(nptr->type == STRING_TYPE || nptr -> type == ID_TYPE){
         free(nptr->val.sval);
     }
     // Week 2 TODO: Recursively free each node in the AST

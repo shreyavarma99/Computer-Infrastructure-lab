@@ -1,15 +1,15 @@
 /**************************************************************************
  * C S 429 EEL interpreter
- * 
+ *
  * variable.c - This file contains the skeleton of functions to be implemented
  * for EEL-2. When completed, it will contain the code to maintain a hashtable
  * for defined variables.
- * 
+ *
  * Work on it only after finishing EEL-0 and EEL-1.
- * 
+ *
  * Copyright (c) 2021. S. Chatterjee, X. Shen, T. Byrd. All rights reserved.
  * May not be used, modified, or copied without permission.
- **************************************************************************/ 
+ **************************************************************************/
 
 #include "ci.h"
 
@@ -108,22 +108,66 @@ entry_t * init_entry(char *id, node_t *nptr) {
  * Return value: None.
  * Side effect: The entry is inserted into the hashtable, or is updated if
  * it already exists.
- * (STUDENT TODO) 
+ * (STUDENT TODO)
  */
 
 void put(char *id, node_t *nptr) {
     // Week 3 TODO: Implement adding to the hashtable.
+    unsigned long hashVal = hash_function(id);
+    entry_t* e = var_table->entries[hashVal];
+
+    if(e == NULL){
+        //nothing in this spot of hash table
+        var_table->entries[hashVal] = init_entry(id,nptr);
+        return;
+    }
+    else{
+        entry_t *curr = var_table->entries[hashVal];
+        entry_t *prev = curr;
+        while(curr != NULL){
+            if(strcmp(id, curr -> id) == 0){
+                entry_t *next = curr -> next;
+                if(prev != curr){
+                     delete_entry(curr);
+                    prev->next = init_entry(id, nptr);
+                    prev->next->next = next;
+                }
+                else{
+                    var_table->entries[hashVal] = init_entry(id, nptr);
+                    var_table->entries[hashVal]->next = next;
+                    delete_entry(curr);
+                    curr = NULL;
+                }
+                return;
+            }
+            prev = curr;
+            curr = curr->next;
+
+        }
+        prev->next = init_entry(id,nptr);
+
+    }
     return;
 }
 
 /* get() - search for an entry in the hashtable.
  * Parameter: Variable name.
  * Return value: Pointer to the matching entry, or NULL if not found.
- * (STUDENT TODO) 
+ * (STUDENT TODO)
  */
 
 entry_t* get(char* id) {
     // Week 3 TODO: Implement retrieving from the hasttable.
+    unsigned long hash_val = hash_function(id);
+    entry_t *curr = var_table->entries[hash_val];
+    while(curr != NULL){
+        //if id's match
+        if(strcmp(curr -> id, id) == 0){
+            return curr;
+        }
+        curr = curr->next;
+    }
+    //didn't find empty spot
     return NULL;
 }
 
